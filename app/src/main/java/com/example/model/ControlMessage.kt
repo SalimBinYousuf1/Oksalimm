@@ -62,10 +62,10 @@ sealed class ControlMessage {
 
     data class Key(
         val key: String, // "BACK", "HOME", "RECENTS"
-        val keyCode: Int = when (key) {
+        val keyCode: Int = when (key.uppercase()) {
             "BACK" -> 4
             "HOME" -> 3
-            "RECENTS" -> 187
+            "RECENTS", "APP_SWITCH" -> 187
             else -> 0
         }
     ) : ControlMessage() {
@@ -73,6 +73,7 @@ sealed class ControlMessage {
         override fun toJson(): String = JSONObject().apply {
             put("type", type)
             put("key", key)
+            put("action", key)
             put("keyCode", keyCode)
         }.toString()
     }

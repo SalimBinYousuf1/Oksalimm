@@ -119,24 +119,26 @@ fun MirrorScreen(
         }
     }
 
+    val eglBase = remember { EglBase.create() }
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black)
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val containerW = maxWidth.value
-            val containerH = maxHeight.value
+            val containerW = constraints.maxWidth.toFloat()
+            val containerH = constraints.maxHeight.toFloat()
 
-            // Compute letterboxed bounds
-            val containerAspect = if (containerH > 0) containerW / containerH else 1f
+            // Compute letterboxed bounds in exact screen pixels
+            val containerAspect = if (containerH > 0f) containerW / containerH else 1f
             val (actualW, actualH, offsetX, offsetY) = remember(containerW, containerH, hostAspect) {
                 if (containerAspect > hostAspect) {
                     val w = containerH * hostAspect
                     val offX = (containerW - w) / 2f
                     listOf(w, containerH, offX, 0f)
                 } else {
-                    val h = if (hostAspect > 0) containerW / hostAspect else containerH
+                    val h = if (hostAspect > 0f) containerW / hostAspect else containerH
                     val offY = (containerH - h) / 2f
                     listOf(containerW, h, 0f, offY)
                 }
@@ -146,12 +148,18 @@ fun MirrorScreen(
             AndroidView(
                 factory = { ctx ->
                     SurfaceViewRenderer(ctx).apply {
-                        val eglBase = EglBase.create()
                         init(eglBase.eglBaseContext, null)
                         setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT)
                         setEnableHardwareScaler(true)
-                        onAttachRenderer(this)
                     }
+                },
+                update = { renderer ->
+                    onAttachRenderer(renderer)
+                },
+                onRelease = { renderer ->
+                    try {
+                        renderer.release()
+                    } catch (_: Throwable) {}
                 },
                 modifier = Modifier
                     .fillMaxSize()
@@ -161,9 +169,9 @@ fun MirrorScreen(
                         val touchX = motionEvent.x
                         val touchY = motionEvent.y
 
-                        // Translate to normalized Ubaid coordinates
-                        val normX = if (actualW > 0) ((touchX - offsetX) / actualW).coerceIn(0f, 1f) else 0.5f
-                        val normY = if (actualH > 0) ((touchY - offsetY) / actualH).coerceIn(0f, 1f) else 0.5f
+                        // Translate to normalized Ubaid coordinates (0.0 .. 1.0)
+                        val normX = if (actualW > 0f) ((touchX - offsetX) / actualW).coerceIn(0f, 1f) else 0.5f
+                        val normY = if (actualH > 0f) ((touchY - offsetY) / actualH).coerceIn(0f, 1f) else 0.5f
 
                         when (motionEvent.actionMasked) {
                             MotionEvent.ACTION_DOWN -> {
@@ -188,9 +196,12 @@ fun MirrorScreen(
             )
         }
 
-        DisposableEffect(Unit) {
+        DisposableEffect(eglBase) {
             onDispose {
                 onDetachRenderer()
+                try {
+                    eglBase.release()
+                } catch (_: Throwable) {}
             }
         }
 

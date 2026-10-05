@@ -291,7 +291,9 @@ private fun CameraScannerSurface(
                                 processImageProxy(imageProxy, reader) { scannedText ->
                                     if (!hasDetectedQr && scannedText.isNotBlank()) {
                                         hasDetectedQr = true
-                                        onQrCodeScanned(scannedText)
+                                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                            onQrCodeScanned(scannedText)
+                                        }
                                     }
                                 }
                             }
@@ -393,11 +395,12 @@ private fun processImageProxy(
         val bytes = ByteArray(buffer.remaining())
         buffer.get(bytes)
 
+        val rowStride = plane.rowStride
         val width = image.width
         val height = image.height
         val source = PlanarYUVLuminanceSource(
             bytes,
-            width,
+            rowStride,
             height,
             0,
             0,
