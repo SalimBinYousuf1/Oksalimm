@@ -1,0 +1,6 @@
+{
+  "name": "Salim",
+  "description": "Production-grade remote controller for Ubaid with live screen mirroring, touch controls, file browser, and status dashboard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
